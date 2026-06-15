@@ -1,0 +1,12 @@
+# Local design and picture-book production files
+design/
+output/
+tmp/
+assets/illustrations/
+build_picture_book.py
+Jerry-Mixon-Jr-3D-Graduation-Diploma.png
+Jerry-Mixon-Jr-Oregon-University-3D-Diploma.png
+
+# OS/editor files
+.DS_Store
+Thumbs.db
