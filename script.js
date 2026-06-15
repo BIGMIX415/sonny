@@ -77,6 +77,7 @@ const progressFill = document.querySelector("#progressFill");
 const progressTrack = document.querySelector("#progressTrack");
 const soundButton = document.querySelector("#soundButton");
 const soundLabel = document.querySelector("#soundLabel");
+const backgroundMusic = document.querySelector("#backgroundMusic");
 const fullscreenButton = document.querySelector("#fullscreenButton");
 let current = 0;
 let touchStartX = 0;
@@ -156,97 +157,37 @@ fullscreenButton.addEventListener("click", async () => {
   else await document.exitFullscreen?.();
 });
 
-let audioContext;
-let beatTimer;
-let isPlaying = false;
-const tempo = 90;
+backgroundMusic.volume = 0.8;
 
-function noiseBuffer(ctx) {
-  const buffer = ctx.createBuffer(1, ctx.sampleRate * .25, ctx.sampleRate);
-  const data = buffer.getChannelData(0);
-  for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
-  return buffer;
-}
-
-function kick(ctx, time) {
-  const osc = ctx.createOscillator();
-  const gain = ctx.createGain();
-  osc.frequency.setValueAtTime(140, time);
-  osc.frequency.exponentialRampToValueAtTime(42, time + .14);
-  gain.gain.setValueAtTime(.55, time);
-  gain.gain.exponentialRampToValueAtTime(.001, time + .22);
-  osc.connect(gain).connect(ctx.destination);
-  osc.start(time); osc.stop(time + .24);
-}
-
-function hat(ctx, time, level = .06) {
-  const source = ctx.createBufferSource();
-  const filter = ctx.createBiquadFilter();
-  const gain = ctx.createGain();
-  source.buffer = noiseBuffer(ctx);
-  filter.type = "highpass"; filter.frequency.value = 6500;
-  gain.gain.setValueAtTime(level, time);
-  gain.gain.exponentialRampToValueAtTime(.001, time + .055);
-  source.connect(filter).connect(gain).connect(ctx.destination);
-  source.start(time); source.stop(time + .06);
-}
-
-function snare(ctx, time) {
-  const source = ctx.createBufferSource();
-  const filter = ctx.createBiquadFilter();
-  const gain = ctx.createGain();
-  source.buffer = noiseBuffer(ctx);
-  filter.type = "bandpass"; filter.frequency.value = 1600;
-  gain.gain.setValueAtTime(.16, time);
-  gain.gain.exponentialRampToValueAtTime(.001, time + .16);
-  source.connect(filter).connect(gain).connect(ctx.destination);
-  source.start(time); source.stop(time + .17);
-}
-
-function chord(ctx, time, notes) {
-  notes.forEach((freq, i) => {
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    const filter = ctx.createBiquadFilter();
-    osc.type = i === 0 ? "triangle" : "sine";
-    osc.frequency.value = freq;
-    filter.type = "lowpass"; filter.frequency.value = 1100;
-    gain.gain.setValueAtTime(.0001, time);
-    gain.gain.exponentialRampToValueAtTime(.035, time + .04);
-    gain.gain.exponentialRampToValueAtTime(.0001, time + 1.2);
-    osc.connect(filter).connect(gain).connect(ctx.destination);
-    osc.start(time); osc.stop(time + 1.25);
-  });
-}
-
-function scheduleBar() {
-  if (!isPlaying) return;
-  const beat = 60 / tempo;
-  const start = audioContext.currentTime + .06;
-  const progression = [[110, 130.81, 164.81], [98, 123.47, 146.83], [82.41, 110, 130.81], [92.5, 116.54, 146.83]];
-  const barIndex = Math.floor(start / (beat * 4)) % progression.length;
-  chord(audioContext, start, progression[barIndex]);
-  for (let step = 0; step < 8; step++) {
-    const time = start + step * beat / 2;
-    hat(audioContext, time, step % 2 ? .04 : .065);
-    if (step === 0 || step === 5) kick(audioContext, time);
-    if (step === 2 || step === 6) snare(audioContext, time);
-  }
-  beatTimer = window.setTimeout(scheduleBar, beat * 4 * 1000 - 80);
-}
-
-soundButton.addEventListener("click", () => {
-  if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
-  isPlaying = !isPlaying;
+function updateMusicButton(isPlaying) {
   soundButton.setAttribute("aria-pressed", String(isPlaying));
   soundLabel.textContent = isPlaying ? "Pause the beat" : "Play the beat";
-  if (isPlaying) {
-    const start = () => scheduleBar();
-    if (audioContext.state === "suspended") audioContext.resume().then(start).catch(() => {});
-    else start();
+}
+
+soundButton.addEventListener("click", async () => {
+  if (backgroundMusic.paused) {
+    try {
+      await backgroundMusic.play();
+      updateMusicButton(true);
+    } catch {
+      updateMusicButton(false);
+      backgroundMusic.controls = true;
+      backgroundMusic.classList.add("fallback-player");
+      soundLabel.textContent = "Use music player";
+    }
   } else {
-    window.clearTimeout(beatTimer);
+    backgroundMusic.pause();
+    updateMusicButton(false);
   }
+});
+
+backgroundMusic.addEventListener("play", () => updateMusicButton(true));
+backgroundMusic.addEventListener("pause", () => updateMusicButton(false));
+backgroundMusic.addEventListener("error", () => {
+  updateMusicButton(false);
+  backgroundMusic.controls = true;
+  backgroundMusic.classList.add("fallback-player");
+  soundLabel.textContent = "Music unavailable";
 });
 
 renderChapters();

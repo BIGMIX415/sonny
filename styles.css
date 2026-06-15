@@ -60,6 +60,20 @@ body::before {
 
 button { font: inherit; }
 
+#backgroundMusic { display: none; }
+
+#backgroundMusic.fallback-player {
+  display: block;
+  position: fixed;
+  z-index: 20;
+  left: 50%;
+  bottom: 12px;
+  width: min(320px, calc(100vw - 120px));
+  height: 38px;
+  transform: translateX(-50%);
+  filter: sepia(1) hue-rotate(65deg) saturate(1.3);
+}
+
 .topbar {
   height: 76px;
   padding: 0 clamp(20px, 4vw, 64px);
